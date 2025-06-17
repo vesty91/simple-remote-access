@@ -1,49 +1,67 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Monitor, Settings, History, Users, FileText, MessageSquare, Home, User } from 'lucide-react';
+import { 
+  Monitor, 
+  Smartphone, 
+  WifiIcon, 
+  FileText, 
+  MessageSquare, 
+  History, 
+  Settings, 
+  Sun, 
+  Moon,
+  Home
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import UserMenu from './UserMenu';
 
-const Navbar = ({ isDarkMode, toggleDarkMode }: { isDarkMode: boolean, toggleDarkMode: () => void }) => {
+interface NavbarProps {
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
+const Navbar = ({ isDarkMode, toggleDarkMode }: NavbarProps) => {
   const location = useLocation();
 
   const navItems = [
-    { icon: Home, label: 'Accueil', path: '/' },
-    { icon: Monitor, label: 'Mes Appareils', path: '/devices' },
-    { icon: Users, label: 'Se connecter', path: '/connect' },
-    { icon: FileText, label: 'Transfert fichiers', path: '/files' },
-    { icon: MessageSquare, label: 'Messagerie', path: '/chat' },
-    { icon: History, label: 'Historique', path: '/history' },
-    { icon: Settings, label: 'Paramètres', path: '/settings' },
+    { path: '/', icon: Home, label: 'Tableau de bord' },
+    { path: '/devices', icon: Smartphone, label: 'Appareils' },
+    { path: '/connect', icon: WifiIcon, label: 'Connexion' },
+    { path: '/files', icon: FileText, label: 'Fichiers' },
+    { path: '/chat', icon: MessageSquare, label: 'Messages' },
+    { path: '/history', icon: History, label: 'Historique' },
+    { path: '/settings', icon: Settings, label: 'Paramètres' },
   ];
 
   return (
-    <nav className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+    <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <Monitor className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                RemoteControl Pro
+              <span className="text-xl font-bold text-gray-900 dark:text-white">
+                Prise en main
               </span>
-            </div>
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
+              
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -53,23 +71,47 @@ const Navbar = ({ isDarkMode, toggleDarkMode }: { isDarkMode: boolean, toggleDar
             })}
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleDarkMode}
-              className="rounded-full"
+              className="w-9 h-9 p-0"
             >
-              {isDarkMode ? '☀️' : '🌙'}
+              {isDarkMode ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-full"
-            >
-              <User className="w-4 h-4" />
-            </Button>
+            
+            <UserMenu />
           </div>
+        </div>
+      </div>
+
+      {/* Mobile navigation */}
+      <div className="md:hidden border-t border-gray-200 dark:border-gray-700">
+        <div className="px-2 pt-2 pb-3 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </nav>

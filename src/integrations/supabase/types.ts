@@ -9,7 +9,363 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_deleted: boolean | null
+          is_moderated: boolean | null
+          message_text: string
+          message_type: string | null
+          sender_user_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          is_moderated?: boolean | null
+          message_text: string
+          message_type?: string | null
+          sender_user_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          is_moderated?: boolean | null
+          message_text?: string
+          message_type?: string | null
+          sender_user_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "remote_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connection_history: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          details: Json | null
+          device_id: string | null
+          id: string
+          ip_address: unknown | null
+          session_id: string | null
+          suspicious_activity: boolean | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          details?: Json | null
+          device_id?: string | null
+          id?: string
+          ip_address?: unknown | null
+          session_id?: string | null
+          suspicious_activity?: boolean | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          details?: Json | null
+          device_id?: string | null
+          id?: string
+          ip_address?: unknown | null
+          session_id?: string | null
+          suspicious_activity?: boolean | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connection_history_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connection_history_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "remote_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_permissions: {
+        Row: {
+          device_id: string
+          expires_at: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          is_active: boolean | null
+          permission_level: string
+          user_id: string
+        }
+        Insert: {
+          device_id: string
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          permission_level?: string
+          user_id: string
+        }
+        Update: {
+          device_id?: string
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          permission_level?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_permissions_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          access_code: string | null
+          agent_installed: boolean | null
+          created_at: string | null
+          description: string | null
+          device_type: string
+          id: string
+          ip_address: unknown | null
+          is_online: boolean | null
+          is_permanent: boolean | null
+          last_seen: string | null
+          mac_address: string | null
+          name: string
+          operating_system: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_code?: string | null
+          agent_installed?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          device_type: string
+          id?: string
+          ip_address?: unknown | null
+          is_online?: boolean | null
+          is_permanent?: boolean | null
+          last_seen?: string | null
+          mac_address?: string | null
+          name: string
+          operating_system?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_code?: string | null
+          agent_installed?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          device_type?: string
+          id?: string
+          ip_address?: unknown | null
+          is_online?: boolean | null
+          is_permanent?: boolean | null
+          last_seen?: string | null
+          mac_address?: string | null
+          name?: string
+          operating_system?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      file_transfers: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          file_name: string
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string
+          progress_percentage: number | null
+          receiver_device_id: string | null
+          sender_user_id: string
+          session_id: string
+          started_at: string | null
+          status: string
+          transfer_direction: string
+          transfer_speed: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_name: string
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          progress_percentage?: number | null
+          receiver_device_id?: string | null
+          sender_user_id: string
+          session_id: string
+          started_at?: string | null
+          status?: string
+          transfer_direction: string
+          transfer_speed?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          progress_percentage?: number | null
+          receiver_device_id?: string | null
+          sender_user_id?: string
+          session_id?: string
+          started_at?: string | null
+          status?: string
+          transfer_direction?: string
+          transfer_speed?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_transfers_receiver_device_id_fkey"
+            columns: ["receiver_device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_transfers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "remote_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          role: string | null
+          two_factor_enabled: boolean | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          role?: string | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          role?: string | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      remote_sessions: {
+        Row: {
+          access_code: string | null
+          chat_enabled: boolean | null
+          controller_user_id: string
+          created_at: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          file_transfer_enabled: boolean | null
+          host_device_id: string
+          id: string
+          screen_sharing_quality: string | null
+          session_type: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          access_code?: string | null
+          chat_enabled?: boolean | null
+          controller_user_id: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          file_transfer_enabled?: boolean | null
+          host_device_id: string
+          id?: string
+          screen_sharing_quality?: string | null
+          session_type: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          access_code?: string | null
+          chat_enabled?: boolean | null
+          controller_user_id?: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          file_transfer_enabled?: boolean | null
+          host_device_id?: string
+          id?: string
+          screen_sharing_quality?: string | null
+          session_type?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_sessions_host_device_id_fkey"
+            columns: ["host_device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
