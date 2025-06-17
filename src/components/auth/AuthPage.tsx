@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Shield, Monitor } from 'lucide-react';
+import { Loader2, Shield, Monitor, AlertCircle } from 'lucide-react';
 import { Github } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,88 +38,196 @@ const AuthPage = () => {
     }
   }, [user, loading, navigate]);
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
-    const { error } = await signIn(loginForm.email, loginForm.password);
-    
-    if (error) {
-      setError(error.message);
-      toast({
-        title: "Erreur de connexion",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Connexion réussie",
-        description: "Vous êtes maintenant connecté"
-      });
+    // Validation
+    if (!validateEmail(loginForm.email)) {
+      setError("Veuillez entrer une adresse email valide");
+      return;
     }
-    
-    setIsLoading(false);
+
+    if (!validatePassword(loginForm.password)) {
+      setError("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await signIn(loginForm.email, loginForm.password);
+      
+      if (error) {
+        let errorMessage = "Erreur de connexion";
+        
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = "Email ou mot de passe incorrect";
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = "Veuillez confirmer votre email avant de vous connecter";
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = "Trop de tentatives. Veuillez réessayer plus tard";
+        } else {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+        toast({
+          title: "Erreur de connexion",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Connexion réussie",
+          description: "Vous êtes maintenant connecté"
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError("Une erreur inattendue s'est produite");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
-    if (signupForm.password !== signupForm.confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
-      setIsLoading(false);
+    // Validation
+    if (!validateEmail(signupForm.email)) {
+      setError("Veuillez entrer une adresse email valide");
       return;
     }
 
-    const userData = {
-      first_name: signupForm.firstName,
-      last_name: signupForm.lastName,
-      username: signupForm.username
-    };
-
-    const { error } = await signUp(signupForm.email, signupForm.password, userData);
-    
-    if (error) {
-      setError(error.message);
-      toast({
-        title: "Erreur d'inscription",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Inscription réussie",
-        description: "Vérifiez votre email pour confirmer votre compte"
-      });
+    if (!validatePassword(signupForm.password)) {
+      setError("Le mot de passe doit contenir au moins 6 caractères");
+      return;
     }
-    
-    setIsLoading(false);
+
+    if (signupForm.password !== signupForm.confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (!signupForm.firstName.trim()) {
+      setError("Le prénom est requis");
+      return;
+    }
+
+    if (!signupForm.lastName.trim()) {
+      setError("Le nom est requis");
+      return;
+    }
+
+    if (!signupForm.username.trim()) {
+      setError("Le nom d'utilisateur est requis");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const userData = {
+        first_name: signupForm.firstName.trim(),
+        last_name: signupForm.lastName.trim(),
+        username: signupForm.username.trim()
+      };
+
+      const { error } = await signUp(signupForm.email, signupForm.password, userData);
+      
+      if (error) {
+        let errorMessage = "Erreur d'inscription";
+        
+        if (error.message.includes('User already registered')) {
+          errorMessage = "Un compte existe déjà avec cette adresse email";
+        } else if (error.message.includes('Password should be at least')) {
+          errorMessage = "Le mot de passe doit contenir au moins 6 caractères";
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = "Adresse email invalide";
+        } else {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+        toast({
+          title: "Erreur d'inscription",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Inscription réussie",
+          description: "Votre compte a été créé avec succès"
+        });
+        
+        // Reset form
+        setSignupForm({
+          email: '',
+          password: '',
+          confirmPassword: '',
+          firstName: '',
+          lastName: '',
+          username: ''
+        });
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      setError("Une erreur inattendue s'est produite");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGitHubSignIn = async () => {
-    setIsLoading(true);
     setError(null);
+    setIsLoading(true);
 
-    const { error } = await signInWithGitHub();
-    
-    if (error) {
-      setError(error.message);
-      toast({
-        title: "Erreur de connexion GitHub",
-        description: error.message,
-        variant: "destructive"
-      });
+    try {
+      const { error } = await signInWithGitHub();
+      
+      if (error) {
+        let errorMessage = "Erreur de connexion GitHub";
+        
+        if (error.message.includes('popup')) {
+          errorMessage = "Veuillez autoriser les popups pour vous connecter avec GitHub";
+        } else {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+        toast({
+          title: "Erreur de connexion GitHub",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      }
+      // Note: Don't set loading to false on success since redirect will happen
+    } catch (error) {
+      console.error('GitHub signin error:', error);
+      setError("Une erreur inattendue s'est produite");
       setIsLoading(false);
     }
-    // No need to set loading to false on success since redirect will happen
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -182,6 +289,7 @@ const AuthPage = () => {
 
                 {error && (
                   <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
@@ -197,6 +305,7 @@ const AuthPage = () => {
                         onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                         placeholder="votre@email.com"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -208,6 +317,7 @@ const AuthPage = () => {
                         onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                         placeholder="••••••••"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading}>
@@ -234,6 +344,7 @@ const AuthPage = () => {
                           onChange={(e) => setSignupForm({ ...signupForm, firstName: e.target.value })}
                           placeholder="Jean"
                           required
+                          disabled={isLoading}
                         />
                       </div>
                       <div className="space-y-2">
@@ -244,6 +355,7 @@ const AuthPage = () => {
                           onChange={(e) => setSignupForm({ ...signupForm, lastName: e.target.value })}
                           placeholder="Dupont"
                           required
+                          disabled={isLoading}
                         />
                       </div>
                     </div>
@@ -255,6 +367,7 @@ const AuthPage = () => {
                         onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })}
                         placeholder="jeandupont"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -266,6 +379,7 @@ const AuthPage = () => {
                         onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                         placeholder="votre@email.com"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -277,6 +391,7 @@ const AuthPage = () => {
                         onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                         placeholder="••••••••"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -288,6 +403,7 @@ const AuthPage = () => {
                         onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
                         placeholder="••••••••"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading}>
