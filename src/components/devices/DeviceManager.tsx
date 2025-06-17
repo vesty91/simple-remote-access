@@ -1,56 +1,79 @@
 
 import React, { useState } from 'react';
-import { Monitor, Smartphone, Server, Plus, Settings, Power } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Smartphone, Monitor, Server, Plus, Trash2, Edit, Wifi, WifiOff, Shield, Clock, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+
+interface Device {
+  id: string;
+  name: string;
+  device_type: string;
+  operating_system: string;
+  ip_address: string;
+  is_online: boolean;
+  is_permanent: boolean;
+  agent_installed: boolean;
+  last_seen: string;
+  access_code: string;
+  description: string;
+}
 
 const DeviceManager = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [newDevice, setNewDevice] = useState({ 
-    name: '', 
-    ip_address: '', 
-    description: '',
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [newDevice, setNewDevice] = useState({
+    name: '',
     device_type: 'desktop',
-    operating_system: ''
+    operating_system: '',
+    ip_address: '',
+    description: '',
+    is_permanent: false
   });
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Fetch devices from Supabase
-  const { data: devices, isLoading, error } = useQuery({
-    queryKey: ['devices'],
+  // Fetch devices
+  const { data: devices = [], isLoading, error } = useQuery({
+    queryKey: ['devices', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('devices')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!user
   });
 
   // Add device mutation
   const addDeviceMutation = useMutation({
-    mutationFn: async (deviceData: typeof newDevice) => {
+    mutationFn: async (device: typeof newDevice) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { data, error } = await supabase
         .from('devices')
         .insert([{
-          ...deviceData,
-          user_id: user?.id,
+          ...device,
+          user_id: user.id,
           access_code: Math.random().toString(36).substring(2, 15)
         }])
         .select()
@@ -61,14 +84,15 @@ const DeviceManager = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
-      setNewDevice({ 
-        name: '', 
-        ip_address: '', 
-        description: '',
+      setIsAddDialogOpen(false);
+      setNewDevice({
+        name: '',
         device_type: 'desktop',
-        operating_system: ''
+        operating_system: '',
+        ip_address: '',
+        description: '',
+        is_permanent: false
       });
-      setIsDialogOpen(false);
       toast({
         title: "Appareil ajouté",
         description: "L'appareil a été ajouté avec succès"
@@ -83,43 +107,83 @@ const DeviceManager = () => {
     }
   });
 
+  // Delete device mutation
+  const deleteDeviceMutation = useMutation({
+    mutationFn: async (deviceId: string) => {
+      const { error } = await supabase
+        .from('devices')
+        .delete()
+        .eq('id', deviceId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      toast({
+        title: "Appareil supprimé",
+        description: "L'appareil a été supprimé avec succès"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   const getDeviceIcon = (type: string) => {
     switch (type) {
-      case 'desktop':
-        return Monitor;
-      case 'laptop':
-        return Monitor;
+      case 'mobile':
+        return <Smartphone className="w-5 h-5" />;
       case 'server':
-        return Server;
+        return <Server className="w-5 h-5" />;
       default:
-        return Smartphone;
+        return <Monitor className="w-5 h-5" />;
     }
   };
 
-  const getStatusColor = (status: boolean | null) => {
-    return status ? 'bg-green-500' : 'bg-gray-400';
+  const getStatusBadge = (device: Device) => {
+    if (device.is_online) {
+      return <Badge className="bg-green-100 text-green-800"><Wifi className="w-3 h-3 mr-1" />En ligne</Badge>;
+    }
+    return <Badge variant="secondary"><WifiOff className="w-3 h-3 mr-1" />Hors ligne</Badge>;
   };
 
-  const handleAddDevice = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newDevice.name && newDevice.ip_address) {
-      addDeviceMutation.mutate(newDevice);
+  const handleAddDevice = () => {
+    addDeviceMutation.mutate(newDevice);
+  };
+
+  const handleDeleteDevice = (deviceId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet appareil ?')) {
+      deleteDeviceMutation.mutate(deviceId);
     }
   };
+
+  if (!user) {
+    return (
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Vous devez être connecté pour gérer vos appareils.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
+    return <div>Chargement...</div>;
   }
 
   if (error) {
     return (
-      <div className="text-center p-8">
-        <p className="text-red-500">Erreur lors du chargement des appareils</p>
-      </div>
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Erreur lors du chargement des appareils : {(error as Error).message}
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -127,12 +191,17 @@ const DeviceManager = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mes Appareils</h1>
-          <p className="text-gray-600 dark:text-gray-400">Gérez vos appareils connectés</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Gestion des appareils
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Gérez et surveillez tous vos appareils connectés
+          </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
+            <Button>
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un appareil
             </Button>
@@ -141,136 +210,174 @@ const DeviceManager = () => {
             <DialogHeader>
               <DialogTitle>Ajouter un nouvel appareil</DialogTitle>
               <DialogDescription>
-                Configurez un nouvel appareil pour la prise de contrôle à distance
+                Configurez un nouvel appareil pour le contrôle à distance
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleAddDevice} className="space-y-4">
-              <div className="space-y-2">
+            <div className="space-y-4">
+              <div>
                 <Label htmlFor="name">Nom de l'appareil</Label>
                 <Input
                   id="name"
                   value={newDevice.name}
                   onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
-                  placeholder="Mon PC Bureau"
-                  required
+                  placeholder="Mon ordinateur portable"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ip">Adresse IP</Label>
+              
+              <div>
+                <Label htmlFor="device_type">Type d'appareil</Label>
+                <Select
+                  value={newDevice.device_type}
+                  onValueChange={(value) => setNewDevice({ ...newDevice, device_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desktop">Ordinateur de bureau</SelectItem>
+                    <SelectItem value="laptop">Ordinateur portable</SelectItem>
+                    <SelectItem value="server">Serveur</SelectItem>
+                    <SelectItem value="mobile">Mobile</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="operating_system">Système d'exploitation</Label>
                 <Input
-                  id="ip"
+                  id="operating_system"
+                  value={newDevice.operating_system}
+                  onChange={(e) => setNewDevice({ ...newDevice, operating_system: e.target.value })}
+                  placeholder="Windows 11, macOS, Ubuntu..."
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="ip_address">Adresse IP (optionnel)</Label>
+                <Input
+                  id="ip_address"
                   value={newDevice.ip_address}
                   onChange={(e) => setNewDevice({ ...newDevice, ip_address: e.target.value })}
                   placeholder="192.168.1.100"
-                  required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="os">Système d'exploitation</Label>
-                <Input
-                  id="os"
-                  value={newDevice.operating_system}
-                  onChange={(e) => setNewDevice({ ...newDevice, operating_system: e.target.value })}
-                  placeholder="Windows 11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (optionnel)</Label>
-                <Input
+              
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
                   id="description"
                   value={newDevice.description}
                   onChange={(e) => setNewDevice({ ...newDevice, description: e.target.value })}
-                  placeholder="PC principal du bureau"
+                  placeholder="Description de l'appareil..."
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={addDeviceMutation.isPending}>
-                {addDeviceMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Ajout...
-                  </>
-                ) : (
-                  "Ajouter l'appareil"
-                )}
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_permanent"
+                  checked={newDevice.is_permanent}
+                  onCheckedChange={(checked) => setNewDevice({ ...newDevice, is_permanent: checked })}
+                />
+                <Label htmlFor="is_permanent">Accès permanent</Label>
+              </div>
+              
+              <Button onClick={handleAddDevice} className="w-full" disabled={addDeviceMutation.isPending}>
+                {addDeviceMutation.isPending ? 'Ajout...' : 'Ajouter l\'appareil'}
               </Button>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {devices?.map((device) => {
-          const DeviceIcon = getDeviceIcon(device.device_type);
-          return (
-            <Card key={device.id} className="hover:shadow-lg transition-all duration-200 hover:scale-105">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+      {devices.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Monitor className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Aucun appareil configuré
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-center mb-4">
+              Commencez par ajouter votre premier appareil pour pouvoir le contrôler à distance.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {devices.map((device) => (
+            <Card key={device.id} className="relative">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      <DeviceIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
+                    {getDeviceIcon(device.device_type)}
                     <div>
                       <CardTitle className="text-lg">{device.name}</CardTitle>
-                      <CardDescription>{device.operating_system || 'Système inconnu'}</CardDescription>
+                      <CardDescription>{device.operating_system}</CardDescription>
                     </div>
                   </div>
-                  <div className={`w-3 h-3 rounded-full ${getStatusColor(device.is_online)}`} />
+                  <div className="flex space-x-1">
+                    <Button variant="ghost" size="sm" onClick={() => setEditingDevice(device)}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDeleteDevice(device.id)}
+                      disabled={deleteDeviceMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Status:</span>
-                    <Badge variant={device.is_online ? 'default' : 'secondary'}>
-                      {device.is_online ? 'En ligne' : 'Hors ligne'}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">IP:</span>
-                    <span className="font-mono">{device.ip_address}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Code d'accès:</span>
-                    <span className="font-mono text-xs">{device.access_code}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Dernière activité:</span>
-                    <span>{device.last_seen ? new Date(device.last_seen).toLocaleDateString() : 'Jamais'}</span>
-                  </div>
-                  
-                  <div className="flex space-x-2 pt-3">
-                    <Button 
-                      size="sm" 
-                      className="flex-1"
-                      disabled={!device.is_online}
-                    >
-                      <Power className="w-4 h-4 mr-1" />
-                      Se connecter
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </div>
+              
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Statut</span>
+                  {getStatusBadge(device)}
                 </div>
+                
+                {device.ip_address && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">IP</span>
+                    <span className="text-sm font-mono">{device.ip_address}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Agent</span>
+                  <Badge variant={device.agent_installed ? "default" : "secondary"}>
+                    <Shield className="w-3 h-3 mr-1" />
+                    {device.agent_installed ? 'Installé' : 'Non installé'}
+                  </Badge>
+                </div>
+                
+                {device.access_code && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Code</span>
+                    <span className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                      {device.access_code}
+                    </span>
+                  </div>
+                )}
+                
+                {device.last_seen && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Dernière vue</span>
+                    <span className="text-sm flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {new Date(device.last_seen).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
+                )}
+                
+                {device.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                    {device.description}
+                  </p>
+                )}
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
-
-      {devices?.length === 0 && (
-        <div className="text-center py-12">
-          <Monitor className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucun appareil configuré
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            Commencez par ajouter votre premier appareil pour la prise de contrôle à distance
-          </p>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Ajouter un appareil
-          </Button>
+          ))}
         </div>
       )}
     </div>

@@ -8,11 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { Loader2, Shield, Monitor } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const AuthPage = () => {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, signInWithGitHub, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -97,6 +99,24 @@ const AuthPage = () => {
     setIsLoading(false);
   };
 
+  const handleGitHubSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const { error } = await signInWithGitHub();
+    
+    if (error) {
+      setError(error.message);
+      toast({
+        title: "Erreur de connexion GitHub",
+        description: error.message,
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
+    // No need to set loading to false on success since redirect will happen
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -127,135 +147,163 @@ const AuthPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Connexion</TabsTrigger>
-                <TabsTrigger value="signup">Inscription</TabsTrigger>
-              </TabsList>
+            <div className="space-y-4">
+              {/* GitHub Sign In Button */}
+              <Button
+                onClick={handleGitHubSignIn}
+                variant="outline"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Github className="w-4 h-4 mr-2" />
+                )}
+                Continuer avec GitHub
+              </Button>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Ou continuer avec
+                  </span>
+                </div>
+              </div>
 
-              <TabsContent value="login">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={loginForm.email}
-                      onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                      placeholder="votre@email.com"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Mot de passe</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={loginForm.password}
-                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                      placeholder="••••••••"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Connexion...
-                      </>
-                    ) : (
-                      'Se connecter'
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+              <Tabs defaultValue="login" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Connexion</TabsTrigger>
+                  <TabsTrigger value="signup">Inscription</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <TabsContent value="login">
+                  <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Prénom</Label>
+                      <Label htmlFor="email">Email</Label>
                       <Input
-                        id="firstName"
-                        value={signupForm.firstName}
-                        onChange={(e) => setSignupForm({ ...signupForm, firstName: e.target.value })}
-                        placeholder="Jean"
+                        id="email"
+                        type="email"
+                        value={loginForm.email}
+                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                        placeholder="votre@email.com"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Nom</Label>
+                      <Label htmlFor="password">Mot de passe</Label>
                       <Input
-                        id="lastName"
-                        value={signupForm.lastName}
-                        onChange={(e) => setSignupForm({ ...signupForm, lastName: e.target.value })}
-                        placeholder="Dupont"
+                        id="password"
+                        type="password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                        placeholder="••••••••"
                         required
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Nom d'utilisateur</Label>
-                    <Input
-                      id="username"
-                      value={signupForm.username}
-                      onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })}
-                      placeholder="jeandupont"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email</Label>
-                    <Input
-                      id="signupEmail"
-                      type="email"
-                      value={signupForm.email}
-                      onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                      placeholder="votre@email.com"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Mot de passe</Label>
-                    <Input
-                      id="signupPassword"
-                      type="password"
-                      value={signupForm.password}
-                      onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                      placeholder="••••••••"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={signupForm.confirmPassword}
-                      onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
-                      placeholder="••••••••"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Inscription...
-                      </>
-                    ) : (
-                      "S'inscrire"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Connexion...
+                        </>
+                      ) : (
+                        'Se connecter'
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">Prénom</Label>
+                        <Input
+                          id="firstName"
+                          value={signupForm.firstName}
+                          onChange={(e) => setSignupForm({ ...signupForm, firstName: e.target.value })}
+                          placeholder="Jean"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Nom</Label>
+                        <Input
+                          id="lastName"
+                          value={signupForm.lastName}
+                          onChange={(e) => setSignupForm({ ...signupForm, lastName: e.target.value })}
+                          placeholder="Dupont"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Nom d'utilisateur</Label>
+                      <Input
+                        id="username"
+                        value={signupForm.username}
+                        onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })}
+                        placeholder="jeandupont"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signupEmail">Email</Label>
+                      <Input
+                        id="signupEmail"
+                        type="email"
+                        value={signupForm.email}
+                        onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                        placeholder="votre@email.com"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signupPassword">Mot de passe</Label>
+                      <Input
+                        id="signupPassword"
+                        type="password"
+                        value={signupForm.password}
+                        onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={signupForm.confirmPassword}
+                        onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Inscription...
+                        </>
+                      ) : (
+                        "S'inscrire"
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </div>
           </CardContent>
         </Card>
       </div>
