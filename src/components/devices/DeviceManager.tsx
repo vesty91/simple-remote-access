@@ -20,14 +20,14 @@ interface Device {
   id: string;
   name: string;
   device_type: string;
-  operating_system: string;
-  ip_address: string;
-  is_online: boolean;
-  is_permanent: boolean;
-  agent_installed: boolean;
-  last_seen: string;
-  access_code: string;
-  description: string;
+  operating_system: string | null;
+  ip_address: unknown;
+  is_online: boolean | null;
+  is_permanent: boolean | null;
+  agent_installed: boolean | null;
+  last_seen: string | null;
+  access_code: string | null;
+  description: string | null;
 }
 
 const DeviceManager = () => {
@@ -149,6 +149,11 @@ const DeviceManager = () => {
       return <Badge className="bg-green-100 text-green-800"><Wifi className="w-3 h-3 mr-1" />En ligne</Badge>;
     }
     return <Badge variant="secondary"><WifiOff className="w-3 h-3 mr-1" />Hors ligne</Badge>;
+  };
+
+  const formatIpAddress = (ip: unknown): string => {
+    if (ip === null || ip === undefined) return '';
+    return String(ip);
   };
 
   const handleAddDevice = () => {
@@ -311,7 +316,7 @@ const DeviceManager = () => {
                     {getDeviceIcon(device.device_type)}
                     <div>
                       <CardTitle className="text-lg">{device.name}</CardTitle>
-                      <CardDescription>{device.operating_system}</CardDescription>
+                      <CardDescription>{device.operating_system || 'Système non spécifié'}</CardDescription>
                     </div>
                   </div>
                   <div className="flex space-x-1">
@@ -339,7 +344,7 @@ const DeviceManager = () => {
                 {device.ip_address && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-400">IP</span>
-                    <span className="text-sm font-mono">{device.ip_address}</span>
+                    <span className="text-sm font-mono">{formatIpAddress(device.ip_address)}</span>
                   </div>
                 )}
                 
