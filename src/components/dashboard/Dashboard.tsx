@@ -3,8 +3,11 @@ import React from 'react';
 import { Monitor, Users, Clock, Shield, Activity, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const stats = [
     { icon: Monitor, label: 'Appareils connectés', value: '5', change: '+2 cette semaine' },
     { icon: Users, label: 'Sessions actives', value: '2', change: 'En cours' },
@@ -18,6 +21,14 @@ const Dashboard = () => {
     { device: 'PC-Client-03', user: 'Support', time: '08:45', status: 'completed' },
   ];
 
+  const handleNewDevice = () => {
+    navigate('/devices');
+  };
+
+  const handleQuickConnect = () => {
+    navigate('/connect');
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -25,11 +36,18 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold mb-2">Bienvenue sur RemoteControl Pro</h1>
         <p className="text-blue-100 mb-6">Gérez vos connexions à distance en toute sécurité</p>
         <div className="flex space-x-4">
-          <Button className="bg-white text-blue-600 hover:bg-blue-50">
+          <Button 
+            className="bg-white text-blue-600 hover:bg-blue-50"
+            onClick={handleNewDevice}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Nouvel appareil
           </Button>
-          <Button variant="outline" className="border-white text-white hover:bg-white/10">
+          <Button 
+            variant="outline" 
+            className="border-white text-white hover:bg-white/10"
+            onClick={handleQuickConnect}
+          >
             Connexion rapide
           </Button>
         </div>
